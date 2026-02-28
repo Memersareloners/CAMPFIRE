@@ -223,3 +223,4 @@ function onCollectPower(playerSprite, power) {
   health = Math.min(5, health + 1);
   healthText.setText('HP: ' + health);
 }
+
