@@ -1,10 +1,4 @@
-/*
-  New platformer: ship on Earth surface that digs underground.
-  - Uses generated textures (no external assets)
-  - Ship can move, dig (destroy ground blocks), and shoot lasers
-  - Enemies spawn underground and can be destroyed by lasers
-  - Powerups spawn underground and give effects
-*/
+
 
 const config = {
   type: Phaser.AUTO,
@@ -30,16 +24,15 @@ let score = 0;
 let scoreText;
 let health = 3;
 let healthText;
-let keys; // WASD support
+let keys;
 let lastShot = 0;
-const shotCooldown = 300; // ms
+const shotCooldown = 300;
 let lastDig = 0;
-const digCooldown = 500; // ms
+const digCooldown = 500;
 let digIndicator;
 
 function preload() {
-  // Generate simple textures so we don't depend on external assets
-  this.textures.generate('ship', { data: ['  /\\  ', ' /--\\ ', '/====\\', "\\____/"], pixelWidth: 4, palette: { ' ': 0x00000000, '/': 0x6666ff, '\\': 0x6666ff, '-': 0x9999ff, '=': 0x222222, '_': 0x333333 } });
+  this.textures.generate('ship', { data: ['  /\  ', ' /--\ ', '/====\\', "\\____/"], pixelWidth: 4, palette: { ' ': 0x00000000, '/': 0x6666ff, '\\': 0x6666ff, '-': 0x9999ff, '=': 0x222222, '_': 0x333333 } });
   this.textures.generate('block', { data: ['####'], pixelWidth: 8, palette: { '#': 0x8B5A2B } });
   this.textures.generate('enemy', { data: ['><>'], pixelWidth: 8, palette: { '>': 0xff4444, '<': 0xff4444 } });
   this.textures.generate('laser', { data: ['|'], pixelWidth: 4, palette: { '|': 0xffff66 } });
@@ -47,82 +40,66 @@ function preload() {
 }
 
 function create() {
-  // Background
   this.cameras.main.setBackgroundColor('#87ceeb');
 
-  // Ground grid: create blocks in layers to allow digging
   groundGroup = this.physics.add.staticGroup();
   const cols = 40;
-  const rows = 8; // number of rows of blocks underground
+  const rows = 8;
   const blockW = 20;
   const startY = 420;
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
       const x = c * blockW + blockW / 2;
       const y = startY + r * 24;
-      // leave a small gap near the surface for the ship to start
+
       const block = groundGroup.create(x, y, 'block').setOrigin(0.5).refreshBody();
       block.displayWidth = blockW;
       block.displayHeight = 24;
     }
   }
 
-  // Ship (player) sits on surface
   player = this.physics.add.sprite(100, 350, 'ship');
   player.setCollideWorldBounds(true);
   player.setBounce(0.1);
   player.speed = 160;
 
-  // Collide with ground (so ship can't fall through existing blocks)
   this.physics.add.collider(player, groundGroup);
 
-  // Bullets group
   bullets = this.physics.add.group({ defaultKey: 'laser', maxSize: 30 });
 
-  // Enemies and powerups
   enemies = this.physics.add.group();
   powerups = this.physics.add.group();
 
-  // Input
   cursors = this.input.keyboard.createCursorKeys();
   fireKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
   digKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.DOWN);
   keys = this.input.keyboard.addKeys({ W: 'W', A: 'A', D: 'D' });
 
-  // On-screen help
   this.add.rectangle(120, 18, 240, 36, 0xffffff, 0.8).setScrollFactor(0).setDepth(10);
   this.add.text(10, 10, 'Move: ← → / A D   Jump: ↑ / W   Dig: ↓   Shoot: Space', { font: '14px Arial', fill: '#000' }).setScrollFactor(0).setDepth(11);
 
-  // Dig indicator (circle) shows when dig is available
   digIndicator = this.add.graphics().setScrollFactor(0).setDepth(9);
 
-  // Collisions and overlaps
   this.physics.add.overlap(bullets, enemies, onBulletHitEnemy, null, this);
   this.physics.add.overlap(player, enemies, onPlayerHit, null, this);
   this.physics.add.overlap(player, powerups, onCollectPower, null, this);
 
-  // Ground and bullets: bullets destroy blocks when hitting
   this.physics.add.collider(bullets, groundGroup, (b, block) => {
     b.destroy();
-    // remove block to simulate digging with lasers
     block.destroy();
   });
 
-  // UI
   scoreText = this.add.text(8, 8, 'Score: 0', { font: '18px Arial', fill: '#000' }).setScrollFactor(0);
   healthText = this.add.text(700, 8, 'HP: 3', { font: '18px Arial', fill: '#000' }).setScrollFactor(0);
 
-  // Timers for enemy and powerup spawning
   this.time.addEvent({ delay: 3000, callback: spawnEnemy, callbackScope: this, loop: true });
   this.time.addEvent({ delay: 5000, callback: spawnPowerup, callbackScope: this, loop: true });
 }
 
 function update(time) {
-  // Movement controls
   const left = cursors.left.isDown;
   const right = cursors.right.isDown;
   const up = cursors.up.isDown;
-  // WASD controls
   const a = keys.A.isDown;
   const d = keys.D.isDown;
   const w = keys.W.isDown;
@@ -141,25 +118,21 @@ function update(time) {
     player.setVelocityY(-350);
   }
 
-  // Dig key: destroy blocks overlapping player
   const now = this.time.now;
   if (Phaser.Input.Keyboard.JustDown(digKey) && now - lastDig >= digCooldown) {
     digAroundPlayer(this);
     lastDig = now;
   }
 
-  // Fire
   if (Phaser.Input.Keyboard.JustDown(fireKey) && now - lastShot >= shotCooldown) {
     shootLaser(this);
     lastShot = now;
   }
 
-  // Clean up offscreen bullets
   bullets.children.each(b => {
     if (b && (b.y < -50 || b.x > 900 || b.x < -50)) b.destroy();
   });
 
-  // Enemies simple AI: bounce horizontally when blocked or at world bounds
   enemies.children.each(e => {
     if (!e) return;
     if (!e.body) return;
@@ -167,14 +140,12 @@ function update(time) {
     if (e.body.blocked.right) e.setVelocityX(-60);
   });
 
-  // Update dig indicator (simple cooldown circle)
   const digReady = now - lastDig >= digCooldown;
   digIndicator.clear();
   digIndicator.fillStyle(digReady ? 0x66ff66 : 0xff6666, 0.5);
   digIndicator.fillCircle(720, 22, 10);
 }
 
-// Helpers
 function shootLaser(scene) {
   const dir = player.flipX ? -1 : 1;
   const x = player.x + dir * 24;
@@ -187,7 +158,6 @@ function shootLaser(scene) {
   laser.setVelocityX(500 * dir);
   laser.setVelocityY(0);
   laser.setDepth(1);
-  // lifespan
   scene.time.delayedCall(1200, () => { if (laser && laser.destroy) laser.destroy(); });
 }
 
@@ -205,7 +175,6 @@ function digAroundPlayer(scene) {
 }
 
 function spawnEnemy() {
-  // Spawn enemy at random underground column
   const cols = 40;
   const blockW = 20;
   const c = Phaser.Math.Between(0, cols - 1);
@@ -249,7 +218,6 @@ function onPlayerHit(playerSprite, enemy) {
 
 function onCollectPower(playerSprite, power) {
   power.destroy();
-  // simple power: increase score and heal
   score += 25;
   scoreText.setText('Score: ' + score);
   health = Math.min(5, health + 1);
