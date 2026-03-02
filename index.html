@@ -4,14 +4,57 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Campfire Game</title>
-  <style>body{margin:0}</style>
+  <style>
+    body{margin:0;font-family:Arial,Helvetica,sans-serif}
+    #topbar{position:fixed;top:0;left:0;right:0;height:48px;background:#222;color:#fff;display:flex;align-items:center;padding:6px 12px;gap:8px;z-index:999}
+    #topbar button{background:#444;border:0;color:#fff;padding:8px 12px;border-radius:4px;cursor:pointer}
+    #topbar button:hover{background:#555}
+    #game-container{width:100vw;height:100vh;display:none;position:relative}
+    .overlay{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,0.6);z-index:1000}
+    #game-container canvas{width:100% !important;height:100% !important;display:block}
+    .panel{background:#fff;padding:18px;border-radius:8px;min-width:320px}
+    .panel h2{margin-top:0}
+  </style>
 </head>
 <body>
+  <div id="topbar">
+    <button id="btn-start">Start Game</button>
+    <button id="btn-settings">Settings</button>
+    <button id="btn-quit">Quit Game</button>
+    <div style="flex:1"></div>
+    <div style="color:#ddd;font-size:14px">Campfire</div>
+  </div>
   <noscript>Please enable JavaScript to play.</noscript>
   <div id="game-container"></div>
+
+  <div id="settings" class="overlay">
+    <div class="panel">
+      <h2>Settings</h2>
+      <label>Volume: <input id="volume" type="range" min="0" max="100" value="80"></label>
+      <div style="margin-top:12px;text-align:right">
+        <button id="settings-close">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="quit-screen" class="overlay">
+    <div class="panel">
+      <h2>Quit</h2>
+      <p>Thanks for playing.</p>
+      <div style="text-align:right">
+        <button id="quit-reload">Reload</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/phaser@3/dist/phaser.js"></script>
   <script src="game.js"></script>
+  <script>
+    document.getElementById('btn-start').addEventListener('click', () => window.startGame && window.startGame());
+    document.getElementById('btn-settings').addEventListener('click', () => window.openSettings && window.openSettings());
+    document.getElementById('btn-quit').addEventListener('click', () => window.quitGame && window.quitGame());
+    document.getElementById('settings-close').addEventListener('click', () => { document.getElementById('settings').style.display='none'; });
+    document.getElementById('quit-reload').addEventListener('click', () => location.reload());
+  </script>
 </body>
 </html>
-<script src="node_modules/phaser/dist/phaser.js"></script>
-<script src="game.js"></script>
